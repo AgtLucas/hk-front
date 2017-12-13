@@ -6,16 +6,14 @@ module Lib
     ) where
 
 
-import           Miso
-import           Miso.String
+import Text.Read (readMaybe)
+import Miso
+import Miso.String (toMisoString)
 
-type Model = Int
+type Model = Maybe Integer
 
-data Action
-  = AddOne
-  | SubtractOne
+data Action = Update (Maybe Int)
   | NoOp
-  deriving (Show, Eq)
 
 exec :: IO ()
 exec = startApp App {..}
@@ -27,15 +25,18 @@ exec = startApp App {..}
     events = defaultEvents
     subs   = []
 
+fibs :: [Integer]
+fibs = 1 : 1 : zipWith (+) fibs (tail fibs)
+
 updateModel :: Action -> Model -> Effect Action Model
-updateModel AddOne m      = noEff (m + 1)
-updateModel SubtractOne m = noEff (m - 1)
-updateModel NoOp m        = noEff m
+updateModel (Update n) _
+  | n < Just 0 = noEff Nothing
+  | otherwise = noEff $ fmap (fibs !!) n
+updateModel NoOp m = noEff m
 
 viewModel :: Model -> View Action
 viewModel x = div_ []
     [
-      button_ [ onClick AddOne ] [ text "+" ]
+      input_ [ onIput (Update . readMaybe . filter (/= '"') . show) ] []
     , text (toMisoString (show x))
-    , button_ [ onClick SubtractOne ] [ text "-" ]
     ]
